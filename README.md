@@ -18,15 +18,19 @@ Apache with PHP 8.0+, vanilla JavaScript and CSS. No Composer packages, JavaScri
 
 ## Server deployment (coordinate with the server administrator)
 1. Confirm which existing Apache HTTPS vhost serves `poker.lab.test` and record its `DocumentRoot`. Keep the current DNS, Tailscale, Apache virtual-host, and TLS/CA configuration intact.
-2. Verify that the PHP handler and session storage work: `php -v` and `sudo apachectl -t` (or `sudo httpd -t` on RHEL).
+2. Verify that the PHP handler and session storage work: `php -v`. Find the active virtual hosts using `sudo apache2ctl -S` on Ubuntu/Debian or `sudo httpd -S` on RHEL, and validate the configuration with the corresponding `-t` command.
 3. Copy **`index.php`, `api.php`, `lib.php`, `app.js`, and `style.css`** from the reviewed repository revision into that vhost's document root. Do not copy `tests/` or `.github/` into the public web directory.
-4. Create the separate game-state directory for the PHP worker, typically `apache` on RHEL:
+4. Create the separate game-state directory for the actual PHP worker. On an **Ubuntu/Debian server** (usually `www-data`):
+   ```sh
+   sudo install -d -o www-data -g www-data -m 0700 /var/lib/poker-lab
+   ```
+   On a **RHEL server** (usually `apache`), also configure SELinux:
    ```sh
    sudo install -d -o apache -g apache -m 0700 /var/lib/poker-lab
    sudo semanage fcontext -a -t httpd_sys_rw_content_t '/var/lib/poker-lab(/.*)?'
    sudo restorecon -Rv /var/lib/poker-lab
    ```
-   If `semanage` is unavailable, coordinate installing `policycoreutils-python-utils`. The administrator must verify which user PHP actually runs as, and set owner/group accordingly. Check SELinux denials rather than disabling SELinux.
+   On RHEL, `semanage` may require `policycoreutils-python-utils`. Verify the actual PHP worker account before selecting commands. Check access-control denials rather than disabling SELinux.
 5. Keep `/var/lib/poker-lab` **outside the website document root**. `POKER_STATE_FILE` can override the default path `/var/lib/poker-lab/state.json` if provided through the PHP service environment.
 6. Reload Apache/PHP-FPM only if necessary after checking the current configuration. GitHub pushes are **not** automatic deployments unless the team has explicitly configured one.
 

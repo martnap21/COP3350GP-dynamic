@@ -20,3 +20,5 @@ jobs:
           php -l tests/hand-rankings.php
       - name: Poker engine checks
         run: php tests/hand-rankings.php
+      - name: Simulated two-browser game
+        run: bash tests/multiplayer-smoke.sh

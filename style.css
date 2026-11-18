@@ -59,18 +59,10 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .topbar {
   height: 84px;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   border-bottom: 1px solid var(--border);
 }
-.wordmark {
-  color: var(--text);
-  text-decoration: none;
-  font-size: 20px;
-  font-weight: 750;
-  letter-spacing: -.06em;
-}
-.wordmark-dot { color: #759682; }
 .theme-control {
   display: flex;
   gap: 3px;

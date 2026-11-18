@@ -1,7 +1,7 @@
 name: PHP poker checks
 on:
   push:
-    branches: [main, feature/real-sites-mvp]
+    branches: [main, feature/real-sites-mvp, feature/texas-holdem-mvp]
   pull_request:
 jobs:
   php-tests:
@@ -18,6 +18,8 @@ jobs:
           php -l api.php
           php -l lib.php
           php -l tests/hand-rankings.php
+      - name: JavaScript syntax check
+        run: node --check app.js
       - name: Poker engine checks
         run: php tests/hand-rankings.php
       - name: Simulated two-browser game

@@ -11,6 +11,9 @@ A very small **single-player blackjack game against a computer dealer**, replaci
 - **Reset play chips** restores your balance to 500 for another practice session.
 - This demo has **no actual money, cashouts, payments, user accounts, split, double down, or insurance**.
 
+## Appearance
+Use the **Light / Dark** switch at the top-right of the page. On first visit, the site follows your system appearance; after you choose a theme, the preference is remembered in that browser using local storage. The design uses system fonts and simple card visuals, with no external images or libraries. Changing the theme does not affect the current hand or chip balance.
+
 ## Run locally on your Mac
 No database, PHP, Tailscale, GitHub deployment, or server-side game files are needed. Use any simple local web server to serve the repository (module imports require HTTP):
 

@@ -2,55 +2,81 @@
 declare(strict_types=1);
 require_once dirname(__DIR__) . '/lib.php';
 
-function verify(bool $condition, string $message): void {
-    if (!$condition) throw new RuntimeException('FAILED: ' . $message);
+function check(bool $ok, string $label): void {
+    if (!$ok) throw new RuntimeException('FAILED: ' . $label);
 }
 
 $hands = [
-    'straight flush' => ['9H','TH','JH','QH','KH'],
-    'four of a kind' => ['9C','9D','9H','9S','2C'],
-    'full house' => ['KC','KH','KS','2D','2S'],
-    'flush' => ['2H','4H','8H','JH','KH'],
-    'straight' => ['5C','6S','7H','8D','9C'],
-    'three of a kind' => ['6C','6D','6H','9S','2C'],
-    'two pair' => ['QC','QD','2C','2D','9H'],
-    'one pair' => ['AC','AD','5H','8C','2D'],
-    'high card' => ['AC','KD','9S','7H','2C'],
+    'straight flush' => ['9H', 'TH', 'JH', 'QH', 'KH'],
+    'four of a kind' => ['9C', '9D', '9H', '9S', '2C'],
+    'full house' => ['KC', 'KH', 'KS', '2D', '2S'],
+    'flush' => ['2H', '4H', '8H', 'JH', 'KH'],
+    'straight' => ['5C', '6S', '7H', '8D', '9C'],
+    'three of a kind' => ['6C', '6D', '6H', '9S', '2C'],
+    'two pair' => ['QC', 'QD', '2C', '2D', '9H'],
+    'one pair' => ['AC', 'AD', '5H', '8C', '2D'],
+    'high card' => ['AC', 'KD', '9S', '7H', '2C'],
 ];
-$previous = null;
+$last = null;
 foreach ($hands as $label => $cards) {
     $score = poker_evaluate($cards);
-    verify(poker_hand_name($score) === ucfirst($label), 'Correct category: ' . $label);
-    if ($previous !== null) verify(poker_compare($previous, $score) > 0, 'Ranking order: ' . $label);
-    $previous = $score;
+    check(strtolower(poker_hand_name($score)) === $label, 'category ' . $label);
+    if ($last !== null) check(poker_compare($last, $score) > 0, 'rank order ' . $label);
+    $last = $score;
 }
-
-verify(poker_compare(poker_evaluate(['AC','2D','3H','4S','5C']), poker_evaluate(['2C','3D','4H','5S','6C'])) < 0,
-    'Wheel straight ranks below six-high straight.');
-verify(poker_compare(poker_evaluate(['AH','AD','KH','9H','7H']), poker_evaluate(['AS','AC','QH','9S','7C'])) > 0,
-    'Pair kicker comparison works.');
-verify(poker_compare(poker_evaluate(['2C','2D','5H','5S','AH']), poker_evaluate(['2H','2S','5D','5C','AD'])) === 0,
-    'Equal hands tie.');
+check(poker_compare(poker_evaluate(['AC','2D','3H','4S','5C']),
+    poker_evaluate(['2C','3D','4H','5S','6C'])) < 0, 'wheel straight is five high');
+check(poker_compare(poker_evaluate(['AH','AD','KH','9H','7H']),
+    poker_evaluate(['AS','AC','QH','9S','7C'])) > 0, 'kickers decide equal pairs');
+check(poker_compare(poker_evaluate(['2C','2D','5H','5S','AH']),
+    poker_evaluate(['2H','2S','5D','5C','AD'])) === 0, 'tied hands');
+check(poker_best_of_seven(['AC','KC','QC','JC','TC','2D','3H']) === [8,14], 'royal flush from seven');
+check(poker_hand_name(poker_best_of_seven(['AH','AD','AC','AS','2D','3H','4S'])) === 'Four of a kind',
+    'quads from seven');
+check(poker_best_of_seven(['AC','2D','3H','4S','5C','9D','TH'])[0] === 4, 'wheel from seven');
+check(poker_best_of_seven(['2C','3D','4H','5S','6C','7D','8H'])[1] === 8,
+    'best straight from seven');
 $deck = poker_deck();
-verify(count($deck) === 52 && count(array_unique($deck)) === 52, 'Deck has 52 unique cards.');
-$state = poker_new_state();
-$state['deck'] = $deck;
-$cards = [];
-for ($i = 0; $i < 52; $i++) $cards[] = poker_draw_card($state);
-verify(count(array_unique($cards)) === 52 && count($state['deck']) === 0, 'No duplicate deals.');
+check(count($deck) === 52 && count(array_unique($deck)) === 52, '52 unique cards');
 
 $state = poker_new_state();
-$state['phase'] = 'drawing';
-$state['players']['alice'] = ['name' => 'Alice','wins' => 0,'drawn' => false,
-    'hand' => ['AH','KH','QH','JH','TH']];
-$state['players']['bob'] = ['name' => 'Bob','wins' => 0,'drawn' => false,
-    'hand' => ['9C','9D','9H','9S','2H']];
-$view = poker_public_state($state, 'alice');
-verify(count($view['players'][0]['hand']) === 5 && count($view['players'][1]['hand']) === 0,
-    'Opponent cards hidden until showdown.');
-verify(!array_key_exists('deck', $view), 'Deck never returned by API.');
-$state['phase'] = 'showdown';
-$view = poker_public_state($state, 'alice');
-verify(count($view['players'][1]['hand']) === 5, 'All cards visible at showdown.');
+$state['players'] = [
+    'a' => ['name'=>'Alice','stack'=>500,'hand'=>[],'status'=>'lobby',
+      'wins'=>0,'bet'=>0,'acted'=>false,'lastAction'=>'','handName'=>null],
+    'b' => ['name'=>'Bob','stack'=>500,'hand'=>[],'status'=>'lobby',
+      'wins'=>0,'bet'=>0,'acted'=>false,'lastAction'=>'','handName'=>null],
+];
+poker_start_hand($state);
+check($state['phase'] === 'preflop' && count($state['players']['a']['hand']) === 2, 'deal hole cards');
+check($state['smallBlind'] === 'a' && $state['bigBlind'] === 'b' && $state['actor'] === 'a',
+    'heads-up dealer acts preflop');
+check($state['pot'] === 15 && $state['currentBet'] === 10, 'blinds posted');
+$view = poker_public_state($state,'a');
+check(count($view['players'][0]['hand']) === 2 && count($view['players'][1]['hand']) === 0,
+    'opponents hidden');
+check(!array_key_exists('deck',$view), 'secret deck is not in JSON');
+poker_action($state,'a','call');
+poker_action($state,'b','check');
+check($state['phase'] === 'flop' && count($state['board']) === 3 && $state['actor'] === 'b',
+    'flop dealt, nondealer acts first');
+foreach (['flop','turn','river'] as $street) {
+    check($state['phase'] === $street, 'playing street ' . $street);
+    poker_action($state,'b','check');
+    poker_action($state,'a','check');
+}
+check($state['phase'] === 'showdown' && count($state['board']) === 5, 'river showdown');
+check(count($state['winners']) >= 1, 'winner selected');
+check($state['players']['a']['stack'] + $state['players']['b']['stack'] === 1000, 'chips conserved');
+$view = poker_public_state($state,'a');
+check(count($view['players'][1]['hand']) === 2, 'cards shown at showdown');
 
-echo "All game engine tests passed.\n";
+poker_to_lobby($state);
+poker_start_hand($state);
+check($state['dealer'] === 'b' && $state['actor'] === 'b', 'dealer button rotates');
+poker_action($state,'b','fold');
+check($state['phase'] === 'showdown' && $state['showdownByFold'], 'fold wins pot');
+$view = poker_public_state($state,'a');
+check(count($view['players'][1]['hand']) === 0, 'folded hand stays secret to opponent');
+check($state['players']['a']['stack'] + $state['players']['b']['stack'] === 1000, 'fold pot conserved');
+
+echo "All Texas Hold'em engine tests passed.\n";

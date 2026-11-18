@@ -79,4 +79,30 @@ $view = poker_public_state($state,'a');
 check(count($view['players'][1]['hand']) === 0, 'folded hand stays secret to opponent');
 check($state['players']['a']['stack'] + $state['players']['b']['stack'] === 1000, 'fold pot conserved');
 
+
+$three = poker_new_state();
+foreach (['a' => 'Alice', 'b' => 'Bob', 'c' => 'Charlie'] as $id => $name) {
+    $three['players'][$id] = [
+        'name'=>$name, 'stack'=>500, 'hand'=>[], 'status'=>'lobby',
+        'wins'=>0, 'bet'=>0, 'acted'=>false, 'lastAction'=>'', 'handName'=>null,
+    ];
+}
+poker_start_hand($three);
+check($three['dealer'] === 'a' && $three['smallBlind'] === 'b' &&
+    $three['bigBlind'] === 'c' && $three['actor'] === 'a',
+    'three-player blinds and preflop action');
+poker_action($three,'a','raise');
+check($three['currentBet'] === 20 && $three['actor'] === 'b', 'raise reopens betting');
+poker_action($three,'b','call');
+poker_action($three,'c','call');
+check($three['phase'] === 'flop' && $three['actor'] === 'b' && $three['pot'] === 60,
+    'three-player flop after raised preflop');
+for ($street = 0; $street < 3; ++$street) {
+    foreach (['b','c','a'] as $id) poker_action($three,$id,'check');
+}
+check($three['phase'] === 'showdown' && count($three['board']) === 5,
+    'three-player showdown');
+check(array_sum(array_column($three['players'], 'stack')) === 1500,
+    'three-player chips conserved');
+
 echo "All Texas Hold'em engine tests passed.\n";

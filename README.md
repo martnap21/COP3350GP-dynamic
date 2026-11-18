@@ -1,62 +1,76 @@
-# Group Poker Lab
+# Texas Hold'em Group Lab
 
-A minimal **multiplayer five-card draw** application for the private site `https://poker.lab.test`.
+A small, **multiplayer Texas Hold'em** application for the private site `https://poker.lab.test`.
 
-## Features
-- One shared table for **2–6 players** using separate browsers/devices over Tailscale.
-- Join with a display name; no accounts and **no real-money gambling**.
-- Server deals five cards to every player; each player can replace **zero to three** cards once.
-- Once everyone has drawn, hands are revealed, evaluated, and a winner is announced. Ties each receive a point.
-- Everyone sees the same players and round status via **1.8-second polling**. No WebSocket infrastructure needed.
-- Hidden hands and the remaining deck stay on the server until showdown.
-- Anyone at the table can deal, reset an unfinished hand, or return to the lobby.
+## Features and rules
+- 2–6 people at **one live shared table** (1.8-second updates, no WebSockets).
+- Each player gets **two secret hole cards**; the board reveals a **flop (3), turn (1), and river (1)**.
+- Preflop, flop, turn, and river betting rounds with **Fold, Check, Call, and Raise/Bet**.
+- **Dealer rotates** each new hand, including proper heads-up blind and action order.
+- **5-chip small blind, 10-chip big blind**; initial stack **500 play chips** per player.
+- **Simplified fixed-size raises of 10 chips**, with at most three raises per betting round.
+- At showdown, compare the **best five-card hand from seven available cards**. Ties split the pot with odd chips awarded clockwise after the dealer.
+- Player sessions are separate; opponents' hole cards and the deck remain secret until a normal showdown. Folded cards are not shown.
+- Players can refill their **play chips in the lobby**; no real money, purchases, cashouts, or payments.
 
-This is intentionally **not full Texas Hold'em**: there is no betting, money, blinds, or side pots. It is a shared five-card draw classroom MVP.
+**Scope limitation:** This is a classroom Hold'em MVP, **not standard no-limit tournament poker**. All-ins and side pots are not implemented; if you cannot afford a call, you must fold. It has one shared table, no authentication, turn timer, or moderation. Any seated player can reset an abandoned hand by returning to the lobby. It is intended for a trusted lab Tailscale network only.
 
-## Stack
-Apache with PHP 8.0+, vanilla JavaScript and CSS. No Composer packages, JavaScript build step, SQL server, or third-party services. State is stored in a locked JSON file **outside the Apache document root**. Player identity is a PHP session cookie and POST requests use a CSRF token.
+## Technology
+Apache + PHP 8.0+, vanilla JavaScript and CSS. No SQL database, Composer packages, or Node server. Sessions and CSRF tokens protect game actions. Game state is saved in a file with a process-level lock on the server; only the current actor can make a betting move.
 
-## Server deployment
-1. Confirm which existing Apache HTTPS vhost serves `poker.lab.test` and record its `DocumentRoot`. Keep the current DNS, Tailscale, Apache virtual-host, and TLS/CA configuration intact.
-2. Verify that the PHP handler and session storage work: `php -v`. Find the active virtual hosts using `sudo apache2ctl -S` on Ubuntu/Debian or `sudo httpd -S` on RHEL, and validate the configuration with the corresponding `-t` command.
-3. Copy **`index.php`, `api.php`, `lib.php`, `app.js`, and `style.css`** from the reviewed repository revision into that vhost's document root. Do not copy `tests/` or `.github/` into the public web directory.
-4. Create the separate game-state directory for the actual PHP worker. On an **Ubuntu/Debian server** (usually `www-data`):
+## Local test on macOS
+Install PHP 8+ (e.g. `brew install php`), then:
+
+```sh
+git clone https://github.com/martnap21/COP3350GP-dynamic.git poker-test
+cd poker-test
+mkdir -p "$HOME/poker-test-data"
+POKER_STATE_FILE="$HOME/poker-test-data/state.json" php -S 127.0.0.1:8000
+```
+
+Open `http://127.0.0.1:8000` in a normal and private browser window. Join as different players, deal, and act in turn.
+
+To test automatically in a second terminal:
+
+```sh
+php tests/hand-rankings.php
+bash tests/multiplayer-smoke.sh
+```
+
+## Deployment (coordinate with the server administrator)
+1. Verify the Apache HTTPS vhost that serves `poker.lab.test` (e.g. `sudo apache2ctl -S` on Ubuntu or `sudo httpd -S` on RHEL), PHP availability (`php -v`), and its `DocumentRoot`. Keep existing DNS, CA, TLS, reverse proxy, and any protected `/admin/` route unchanged.
+2. Copy **`index.php`, `api.php`, `lib.php`, `app.js`, `style.css`** into the configured poker site document root. Do not publish `tests/`, `.github/`, credentials, state files, or server configuration.
+3. Create a **private writable state directory outside the web root**. On Ubuntu/Debian (usually `www-data`):
    ```sh
    sudo install -d -o www-data -g www-data -m 0700 /var/lib/poker-lab
    ```
-   On a **RHEL server** (usually `apache`), also configure SELinux:
+   On RHEL (usually `apache`) with SELinux:
    ```sh
    sudo install -d -o apache -g apache -m 0700 /var/lib/poker-lab
    sudo semanage fcontext -a -t httpd_sys_rw_content_t '/var/lib/poker-lab(/.*)?'
    sudo restorecon -Rv /var/lib/poker-lab
    ```
-   On RHEL, `semanage` may require `policycoreutils-python-utils`. Verify the actual PHP worker account before selecting commands. Check access-control denials rather than disabling SELinux.
-5. Keep `/var/lib/poker-lab` **outside the website document root**. `POKER_STATE_FILE` can override the default path `/var/lib/poker-lab/state.json` if provided through the PHP service environment.
-6. Reload Apache/PHP-FPM only if necessary after checking the current configuration. GitHub pushes are **not** automatic deployments unless the team has explicitly configured one.
-
-## Test before release
-```sh
-php -l lib.php
-php -l api.php
-php -l index.php
-php tests/hand-rankings.php
-curl -I https://poker.lab.test
-curl https://poker.lab.test
-```
-For the actual multiplayer test, use two different browsers (or a private window) **on separate Tailscale-connected devices**. Join with two names, deal, select up to three cards, finish both draws, verify the showdown and winners, and return to the lobby. Use browser developer tools to verify `api.php` polls succeed.
-
-## Operational limitations
-- **One table per deployment**; no authentication or moderation. Appropriate for a small, trusted classroom tailnet, not a public internet service.
-- Players are tied to a browser session, so losing cookies may strand a player. A seated player can reset the game to the lobby; restarting PHP or the VM does not itself erase the game-state file.
-- File-backed locking is intended for a **single server filesystem**. Don't run multiple PHP servers with separate state directories or deploy the state file into Git.
-- Any member can reset an active hand to recover from an abandoned session. There are no host-only controls.
-- Do not expose the administrative directory, system logs, password files, or CA private keys through either web root. Do not store passwords in the repositories.
-- The server's existing protected `/admin/` path is managed separately. This application does not replace it.
+   Check the actual PHP worker user before proceeding, and investigate permission/SELinux denials rather than disabling protections.
+4. **State format changed from five-card draw.** If the earlier game has been deployed, back up its state and lock file, then remove/rename the old state file *before* switching the server to Hold'em. Example, once the site is stopped:
+   ```sh
+   sudo mv /var/lib/poker-lab/state.json /var/lib/poker-lab/state-five-card-backup.json
+   ```
+   Only do this if the original file exists, during coordinated maintenance. Do **not** delete state files blindly.
+5. Existing HTTPS does not automatically update from GitHub. Deploy a reviewed revision via your group's agreed workflow. Confirm `php -l` on changed PHP files, then perform two-browser Tailscale testing after deployment.
 
 ## Repository layout
-- `index.php`: game page and CSRF token
-- `api.php`: validated game actions, session handling, private/public state
-- `lib.php`: deck, hand evaluation, locked persistence
-- `app.js`: multiplayer polling and interface
-- `style.css`: responsive table design
-- `tests/hand-rankings.php`: no-dependency game-engine tests
+- `lib.php`: deck, ranking of five/seven-card hands, betting rules, chips, turn order and file-locked state
+- `api.php`: session-bound actions, server-side validation, private/public information
+- `index.php`: the page and per-session CSRF token
+- `app.js`: live display and betting buttons
+- `style.css`: responsive game table
+- `tests/hand-rankings.php`: ranking and engine assertions
+- `tests/multiplayer-smoke.sh` + `tests/holdem-http-smoke.py`: independent-session HTTP game test
+
+## Known limitations and planned improvements
+- No all-in, side pots, variable-size raises, or complex betting reopen rules. These require an additional rules engine iteration.
+- No player accounts/host permissions, reconnect identity other than browser cookies, table/lobby codes, or automatic idle-player recovery.
+- One state file is safe for one Apache server/filesystem, **not horizontally scaled multiple servers**.
+- No integrated computer opponents. The smoke test acts as two dummy browser clients.
+- Refill play chips in lobby to continue when stacks are low. An incomplete hand can be cancelled by any seated player.
+- Do not expose this classroom prototype to the public internet.

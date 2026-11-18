@@ -2,131 +2,160 @@
 
 const $ = (id) => document.getElementById(id);
 const token = document.querySelector('meta[name="csrf-token"]').content;
+const activeStreets = ['preflop', 'flop', 'turn', 'river'];
 let game = null;
-let selected = new Set();
-let previousHand = null;
 let busy = false;
 let refreshing = false;
 
-function message(text, isError = false) {
+function message(text, error = false) {
   $('notice').textContent = text;
-  $('notice').classList.toggle('error', isError);
+  $('notice').classList.toggle('error', error);
 }
 
 async function api(action = null, payload = {}) {
-  const options = { credentials: 'same-origin', cache: 'no-store' };
+  const options = { cache: 'no-store', credentials: 'same-origin' };
   if (action !== null) {
     options.method = 'POST';
     options.headers = { 'Content-Type': 'application/json', 'X-CSRF-Token': token };
     options.body = JSON.stringify({ action, ...payload });
   }
   const response = await fetch('api.php', options);
-  const body = await response.json();
-  if (!response.ok) throw new Error(body.error || 'Request failed.');
-  return body;
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Request failed.');
+  return data;
 }
 
-function cardNode(code, selectable = false, index = -1) {
-  const card = document.createElement(selectable ? 'button' : 'span');
-  card.className = 'card';
-  if (selectable) {
-    card.type = 'button';
-    card.setAttribute('aria-pressed', String(selected.has(index)));
-    card.classList.toggle('selected', selected.has(index));
-    card.title = 'Click to select or deselect a card';
-    card.addEventListener('click', () => {
-      if (selected.has(index)) selected.delete(index);
-      else if (selected.size < 3) selected.add(index);
-      else return message('You can replace at most three cards.', true);
-      render();
-    });
+function cardNode(code, compact = false) {
+  const element = document.createElement('span');
+  element.className = 'card';
+  if (compact) element.classList.add('compact');
+  if (!code || code === '??') {
+    element.textContent = '★';
+    element.classList.add('back');
+    return element;
   }
-  if (code === '??') {
-    card.classList.add('back');
-    card.textContent = '★';
-  } else {
-    const rank = code[0] === 'T' ? '10' : code[0];
-    const suit = { C: '♣', D: '♦', H: '♥', S: '♠' }[code[1]] || '?';
-    card.classList.toggle('red', code[1] === 'D' || code[1] === 'H');
-    card.textContent = rank + suit;
-  }
-  return card;
+  const rank = code[0] === 'T' ? '10' : code[0];
+  const suit = { C: '♣', D: '♦', H: '♥', S: '♠' }[code[1]] || '?';
+  if (code[1] === 'D' || code[1] === 'H') element.classList.add('red');
+  element.textContent = rank + suit;
+  return element;
 }
 
 function render() {
   if (!game) return;
   const me = game.players.find((p) => p.id === game.you) || null;
   const inLobby = game.phase === 'lobby';
-  const key = game.handNumber + ':' + game.phase;
-  if (key !== previousHand) {
-    selected.clear();
-    previousHand = key;
-  }
+  const betting = activeStreets.includes(game.phase);
+  const myTurn = betting && game.actor === game.you && me && me.status === 'active';
 
   $('join').hidden = Boolean(me);
   $('game').hidden = false;
   $('join-form').hidden = !inLobby;
   $('join-hint').textContent = inLobby
-    ? 'Choose a name (up to 24 characters) to sit at the shared table.'
-    : 'A hand is in progress. You can join when the table returns to the lobby.';
+    ? 'Enter a name to join the table and receive 500 play chips.'
+    : 'A hand is underway. Join when the players return to the lobby.';
 
-  $('round').textContent = game.handNumber ? 'Hand #' + game.handNumber : 'No hands played yet';
-  const titles = { lobby: 'Waiting for players', drawing: 'Draw round', showdown: 'Showdown' };
-  $('phase-title').textContent = titles[game.phase] || 'Game';
-  let description = '';
-  if (inLobby) description = 'At least two players are needed. Anyone seated can deal.';
-  if (game.phase === 'drawing') description = 'Choose up to three cards to exchange, then confirm your draw. Everyone draws once.';
-  if (game.phase === 'showdown') {
-    const winners = game.players.filter((p) => game.winners.includes(p.id)).map((p) => p.name);
-    description = winners.length ? ('Winner' + (winners.length > 1 ? 's' : '') + ': ' + winners.join(', ') + '.') : 'Round complete.';
+  const labels = {
+    lobby: 'Lobby', preflop: 'Preflop', flop: 'Flop',
+    turn: 'Turn', river: 'River', showdown: 'Showdown',
+  };
+  $('phase-title').textContent = labels[game.phase] || 'Game';
+  $('round').textContent = game.handNumber
+    ? 'Hand #' + game.handNumber : 'No hands played yet';
+  $('pot-label').textContent = 'Pot: ' + game.pot + ' chips';
+  $('bet-label').textContent = 'Current bet: ' + game.currentBet;
+
+  const actor = game.players.find((p) => p.id === game.actor);
+  const winners = game.players.filter((p) => game.winners.includes(p.id));
+  let description = 'At least two players are needed to start a hand.';
+  if (betting) {
+    description = myTurn ? 'Your turn. Choose a betting action.'
+      : actor ? 'Waiting for ' + actor.name + ' to act.' : 'Waiting for next round.';
+  } else if (game.phase === 'showdown') {
+    description = winners.length
+      ? (winners.length === 1 ? 'Winner: ' : 'Tie: ') +
+        winners.map((p) => p.name).join(', ') +
+        (game.showdownByFold ? ' (all opponents folded).' : '.')
+      : 'Hand complete.';
   }
   $('phase-description').textContent = description;
 
   const players = $('players');
   players.replaceChildren();
-  game.players.forEach((p) => {
+  for (const p of game.players) {
     const tile = document.createElement('article');
     tile.className = 'player';
     if (p.id === game.you) tile.classList.add('self');
+    if (p.id === game.actor) tile.classList.add('acting');
     if (game.winners.includes(p.id)) tile.classList.add('winner');
 
-    const name = document.createElement('strong');
-    name.textContent = p.name + (p.id === game.you ? ' (you)' : '');
-    tile.append(name);
-    const details = document.createElement('span');
-    details.textContent = p.wins + ' point' + (p.wins === 1 ? '' : 's') +
-      (game.phase === 'drawing' ? (p.drawn ? ' · Done drawing' : ' · Choosing cards') : '') +
-      (p.handName ? ' · ' + p.handName : '');
-    tile.append(details);
+    const heading = document.createElement('strong');
+    const tags = [
+      p.id === game.dealer ? 'Dealer' : '',
+      p.id === game.smallBlind ? 'SB' : '',
+      p.id === game.bigBlind ? 'BB' : '',
+    ].filter(Boolean).join(', ');
+    heading.textContent = p.name +
+      (p.id === game.you ? ' (you)' : '') + (tags ? ' · ' + tags : '');
+    tile.append(heading);
 
-    if (game.phase === 'showdown') {
+    const info = document.createElement('span');
+    const parts = [p.stack + ' chips'];
+    if (betting) parts.push('Bet: ' + p.bet);
+    if (p.status === 'folded') parts.push('Folded');
+    if (p.lastAction) parts.push(p.lastAction);
+    if (p.handName) parts.push(p.handName);
+    if (p.id === game.actor) parts.push('TURN');
+    info.textContent = parts.join(' · ');
+    tile.append(info);
+
+    if (betting || game.phase === 'showdown') {
       const cards = document.createElement('div');
       cards.className = 'mini-cards';
-      p.hand.forEach((code) => cards.append(cardNode(code)));
+      for (let i = 0; i < p.cardCount; i++) {
+        cards.append(cardNode(p.hand[i] || '??', true));
+      }
       tile.append(cards);
     }
     players.append(tile);
-  });
+  }
+
+  const board = $('board');
+  board.replaceChildren();
+  if (inLobby) {
+    for (let i = 0; i < 5; i++) board.append(cardNode('??'));
+  } else {
+    game.board.forEach((code) => board.append(cardNode(code)));
+    if (game.phase !== 'showdown') {
+      for (let i = game.board.length; i < 5; i++) board.append(cardNode('??'));
+    }
+  }
 
   const hand = $('hand');
   hand.replaceChildren();
-  $('hand-heading').textContent = me ? 'Your cards' : 'Spectating';
-  if (me && me.hand.length) {
-    const selectable = game.phase === 'drawing' && !me.drawn;
-    me.hand.forEach((code, i) => hand.append(cardNode(code, selectable, i)));
-    $('hand-hint').textContent = selectable
-      ? 'Select 0–3 cards to replace, then click Draw selected cards.'
-      : (me.drawn && game.phase === 'drawing'
-        ? 'Your draw is complete. Waiting for others.'
-        : (game.phase === 'showdown' ? (me.handName || 'Showdown complete.') : ''));
-  } else {
-    $('hand-hint').textContent = me ? 'Waiting for cards to be dealt.' : 'Join during the lobby to receive your own hand.';
+  if (me && me.hand.length) me.hand.forEach((code) => hand.append(cardNode(code)));
+  else if (me && !inLobby) {
+    for (let i = 0; i < 2; i++) hand.append(cardNode('??'));
   }
+  $('hand-hint').textContent = !me
+    ? 'Join the table during the lobby to get two private cards.'
+    : inLobby ? 'Your private cards will appear when a hand begins.'
+    : me.status === 'folded' ? 'You folded this hand.'
+    : game.phase === 'showdown'
+      ? (me.handName || (game.showdownByFold ? 'Hand ended by a fold.' : 'Round complete.'))
+      : myTurn ? 'Your turn to act.' : 'Only you can see these two cards.';
 
   $('start-button').hidden = !me || !inLobby;
   $('start-button').disabled = game.players.length < 2;
-  $('draw-button').hidden = !me || game.phase !== 'drawing' || me.drawn;
-  $('draw-button').textContent = selected.size ? 'Replace ' + selected.size + ' and finish draw' : 'Keep all five cards';
+  $('fold-button').hidden = !myTurn;
+  $('check-button').hidden = !myTurn || game.toCall !== 0;
+  $('call-button').hidden = !myTurn || game.toCall <= 0;
+  $('call-button').textContent = 'Call ' + game.toCall;
+  $('call-button').disabled = Boolean(me && me.stack < game.toCall);
+  $('raise-button').hidden = !myTurn || game.raisesRemaining === 0;
+  $('raise-button').textContent = (game.currentBet ? 'Raise' : 'Bet') + ' +10';
+  $('raise-button').disabled = Boolean(me && me.stack < game.toCall + 10);
+  $('refill-button').hidden = !me || !inLobby || me.stack >= 500;
   $('lobby-button').hidden = !me || inLobby;
   $('leave-button').hidden = !me || !inLobby;
 }
@@ -136,10 +165,10 @@ async function refresh() {
   refreshing = true;
   try {
     game = await api();
-    message('Connected · Players update automatically.');
+    message('Connected · Table updates automatically.');
     render();
   } catch (error) {
-    message(error.message + ' Try refreshing the page.', true);
+    message(error.message + ' Refresh and try again.', true);
   } finally {
     refreshing = false;
   }
@@ -150,8 +179,7 @@ async function act(action, payload = {}) {
   busy = true;
   try {
     game = await api(action, payload);
-    selected.clear();
-    message('Updated.');
+    message('Action completed.');
     render();
   } catch (error) {
     message(error.message, true);
@@ -165,11 +193,14 @@ $('join-form').addEventListener('submit', (event) => {
   act('join', { name: $('player-name').value.trim() });
 });
 $('start-button').addEventListener('click', () => act('start'));
-$('draw-button').addEventListener('click', () => act('draw', { positions: [...selected].sort() }));
+for (const action of ['fold', 'check', 'call', 'raise', 'refill', 'leave']) {
+  $(action + '-button').addEventListener('click', () => act(action));
+}
 $('lobby-button').addEventListener('click', () => {
-  if (confirm('Return everyone to the lobby? This ends any unfinished hand.')) act('lobby');
+  if (game && activeStreets.includes(game.phase) &&
+      !confirm('End this unfinished hand for everyone and return to the lobby?')) return;
+  act('lobby');
 });
-$('leave-button').addEventListener('click', () => act('leave'));
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) refresh();
 });

@@ -55,9 +55,10 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 3px;
 }
-.page { width: min(100% - 40px, 760px); margin: 0 auto; }
+.page { width: min(100% - 40px, 760px); min-height: 100svh; margin: 0 auto; display: flex; flex-direction: column; }
+main { flex: 1; }
 .topbar {
-  height: 84px;
+  height: 52px;
   display: flex;
   justify-content: flex-end;
   align-items: center;
@@ -72,7 +73,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   background: var(--subtle);
 }
 .theme-option {
-  padding: 5px 13px;
+  padding: 4px 12px;
   border: 0;
   border-radius: 5px;
   background: transparent;
@@ -85,15 +86,15 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   color: var(--text);
   box-shadow: 0 1px 3px rgba(0, 0, 0, .07);
 }
-.intro { padding: 39px 0 27px; }
+.intro { padding: 15px 0 12px; }
 .intro h1 {
   margin: 0;
-  font-size: clamp(32px, 5.5vw, 46px);
+  font-size: clamp(29px, 4vw, 36px);
   font-weight: 680;
   letter-spacing: -.055em;
   line-height: 1.13;
 }
-.intro p { margin: 9px 0 0; color: var(--muted); font-size: 15px; }
+.intro p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
 .game {
   overflow: hidden;
   border: 1px solid var(--border);
@@ -104,7 +105,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   display: flex;
   justify-content: space-between;
   gap: 20px;
-  padding: 17px 28px;
+  padding: 9px 18px;
   background: var(--subtle);
   border-bottom: 1px solid var(--border);
 }
@@ -117,18 +118,18 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 }
 .stat-value { margin-top: 3px; font-size: 15px; }
 .stat-value strong {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 650;
   letter-spacing: -.03em;
   font-variant-numeric: tabular-nums;
 }
 .stat-value span { color: var(--muted); font-size: 13px; }
-.hands { padding: 26px 28px 8px; }
+.hands { padding: 12px 18px 4px; }
 .hand-heading {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 14px;
+  margin-bottom: 7px;
 }
 .hand h2 {
   margin: 0;
@@ -146,28 +147,28 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .cards {
   display: flex;
   flex-wrap: wrap;
-  gap: 9px;
+  gap: 8px;
   align-items: flex-start;
-  min-height: 112px;
+  min-height: 82px;
 }
 .card {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 73px;
-  height: 102px;
-  padding: 8px;
+  width: 58px;
+  height: 80px;
+  padding: 6px;
   border: 1px solid var(--card-border);
   border-radius: 6px;
   background: var(--card);
   color: var(--card-text);
 }
 .card-rank {
-  font: 600 29px/1 Georgia, "Times New Roman", serif;
+  font: 600 24px/1 Georgia, "Times New Roman", serif;
   letter-spacing: -.03em;
 }
-.card-suit { margin-top: 4px; font-size: 19px; line-height: 1; }
+.card-suit { margin-top: 3px; font-size: 16px; line-height: 1; }
 .card.red { color: var(--red); }
 .card-back {
   position: relative;
@@ -183,11 +184,11 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   border: 1px solid rgba(255,255,255,.55);
   border-radius: 3px;
 }
-.placeholder { padding-top: 37px; color: var(--muted); font-size: 13px; }
+.placeholder { padding-top: 25px; color: var(--muted); font-size: 13px; }
 .result {
-  margin: 26px 0;
-  padding: 15px 0;
-  min-height: 55px;
+  margin: 11px 0;
+  padding: 8px 0;
+  min-height: 39px;
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   font-size: 14px;
@@ -205,9 +206,9 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 12px;
-  min-height: 96px;
-  padding: 18px 24px 22px;
+  gap: 10px;
+  min-height: 66px;
+  padding: 10px 18px;
   background: var(--subtle);
   border-top: 1px solid var(--border);
 }
@@ -217,7 +218,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 40px;
+  min-height: 36px;
   padding: 0 11px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -236,9 +237,9 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .bet-field input:focus-visible { outline: none; }
 .bet-field span { color: var(--muted); font-size: 12px; }
 .action-row button {
-  min-height: 42px;
-  min-width: 104px;
-  padding: 9px 16px;
+  min-height: 36px;
+  min-width: 100px;
+  padding: 7px 16px;
   border-radius: 6px;
   font-size: 14px;
   font-weight: 620;
@@ -262,7 +263,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-  padding: 16px 1px;
+  padding: 7px 1px;
 }
 .after-game p { margin: 0; color: var(--muted); font-size: 13px; }
 .reset {
@@ -276,28 +277,49 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 }
 .reset:hover { color: var(--text); }
 footer {
-  margin-top: 28px;
-  padding: 18px 0 30px;
+  margin-top: auto;
+  padding: 9px 0 14px;
   border-top: 1px solid var(--border);
   color: var(--muted);
   font-size: 12px;
 }
 @media (max-width: 560px) {
   .page { width: min(100% - 28px, 760px); }
-  .topbar { height: 72px; }
-  .intro { padding-top: 30px; }
-  .game-meta { padding: 15px 18px; }
-  .hands { padding: 21px 18px 5px; }
-  .card { width: 62px; height: 88px; }
-  .cards { min-height: 93px; gap: 7px; }
-  .card-rank { font-size: 25px; }
-  .card-suit { font-size: 17px; }
-  .placeholder { padding-top: 30px; }
-  .result { margin: 22px 0; }
-  .controls { padding: 18px 12px; }
+  .topbar { height: 48px; }
+  .intro { padding-top: 13px; }
+  .game-meta { padding: 8px 12px; }
+  .hands { padding: 10px 12px 2px; }
+  .card { width: 52px; height: 73px; }
+  .cards { min-height: 77px; gap: 7px; }
+  .card-rank { font-size: 22px; }
+  .card-suit { font-size: 15px; }
+  .placeholder { padding-top: 23px; }
+  .result { margin: 9px 0; }
+  .controls { padding: 9px 12px; }
   .action-row { width: 100%; }
   .action-row .primary { flex: 1; }
 }
 @media (prefers-reduced-motion: no-preference) {
   .theme-option, .primary, .secondary { transition: background-color .15s ease, color .15s ease; }
+}
+
+/* Keep the entire table, controls and project footer visible on shorter
+   desktop browser windows. Very small windows still scroll naturally. */
+@media (max-height: 700px) and (min-width: 561px) {
+  .topbar { height: 44px; }
+  .intro { padding: 8px 0 9px; }
+  .intro h1 { font-size: 30px; }
+  .intro p { margin-top: 2px; }
+  .game-meta { padding: 7px 16px; }
+  .hands { padding: 8px 16px 2px; }
+  .hand-heading { margin-bottom: 5px; }
+  .cards { min-height: 72px; gap: 7px; }
+  .card { width: 52px; height: 70px; }
+  .card-rank { font-size: 21px; }
+  .card-suit { font-size: 14px; }
+  .placeholder { padding-top: 22px; }
+  .result { margin: 7px 0; padding: 6px 0; min-height: 33px; }
+  .controls { min-height: 56px; padding: 8px 16px; }
+  .after-game { padding: 5px 1px; }
+  footer { padding: 7px 0 9px; }
 }

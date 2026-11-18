@@ -3,57 +3,92 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A simple blackjack 21 game against the dealer, using play chips.">
-  <title>Blackjack 21</title>
+  <meta name="description" content="A straightforward game of blackjack against the dealer.">
+  <title>Blackjack</title>
+  <script>
+    // Set the preferred theme before the page paints.
+    (() => {
+      let saved;
+      try { saved = localStorage.getItem('blackjack-theme'); } catch {}
+      const systemDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+      document.documentElement.dataset.theme =
+        saved === 'light' || saved === 'dark' ? saved : (systemDark ? 'dark' : 'light');
+    })();
+  </script>
   <link rel="stylesheet" href="style.css">
   <script type="module" src="app.js"></script>
 </head>
 <body>
-  <main>
-    <header class="heading">
-      <p class="eyebrow">Private group lab · Simple card game</p>
-      <h1>Blackjack <span>21</span></h1>
-      <p>Get closer to 21 than the dealer without going over.</p>
+  <div class="page">
+    <header class="topbar">
+      <a class="wordmark" href="./" aria-label="Blackjack home">BJ<span class="wordmark-dot">.</span></a>
+      <div class="theme-control" role="group" aria-label="Appearance">
+        <button type="button" id="theme-light" class="theme-option" aria-pressed="false">Light</button>
+        <button type="button" id="theme-dark" class="theme-option" aria-pressed="false">Dark</button>
+      </div>
     </header>
-    <div class="balance-bar">
-      <div>Balance: <strong id="balance">500</strong> chips</div>
-      <div>Current bet: <strong id="wager">0</strong> chips</div>
-    </div>
 
-    <section class="table" aria-label="Blackjack table">
-      <div class="hand">
-        <div class="hand-title">
-          <h2>Dealer</h2>
-          <span class="total">Total: <strong id="dealer-total">—</strong></span>
+    <main>
+      <div class="intro">
+        <h1>Blackjack</h1>
+        <p>Twenty-one. Nothing complicated.</p>
+      </div>
+
+      <section class="game" aria-label="Blackjack game">
+        <div class="game-meta">
+          <div class="stat">
+            <span class="stat-label">Your balance</span>
+            <span class="stat-value"><strong id="balance">500</strong> <span>chips</span></span>
+          </div>
+          <div class="stat stat-right">
+            <span class="stat-label">On the table</span>
+            <span class="stat-value"><strong id="wager">0</strong> <span>chips</span></span>
+          </div>
         </div>
-        <div id="dealer-cards" class="cards"></div>
-      </div>
 
-      <p id="result" class="result" role="status" aria-live="polite">Choose your bet and deal.</p>
+        <div class="hands">
+          <div class="hand">
+            <div class="hand-heading">
+              <h2>Dealer</h2>
+              <span class="total" aria-label="Dealer total">Total <strong id="dealer-total">—</strong></span>
+            </div>
+            <div id="dealer-cards" class="cards" aria-label="Dealer cards"></div>
+          </div>
 
-      <div class="hand">
-        <div class="hand-title">
-          <h2>You</h2>
-          <span class="total">Total: <strong id="player-total">—</strong></span>
+          <p id="result" class="result" role="status" aria-live="polite">Choose your bet and deal.</p>
+
+          <div class="hand">
+            <div class="hand-heading">
+              <h2>Your hand</h2>
+              <span class="total" aria-label="Your total">Total <strong id="player-total">—</strong></span>
+            </div>
+            <div id="player-cards" class="cards" aria-label="Your cards"></div>
+          </div>
         </div>
-        <div id="player-cards" class="cards"></div>
-      </div>
-    </section>
 
-    <section class="controls" aria-label="Game controls">
-      <form id="deal-form" class="action-row">
-        <label for="bet-amount">Bet (play chips)</label>
-        <input id="bet-amount" name="bet" type="number" min="10" max="500" step="10" value="20" required>
-        <button id="deal-button" type="submit">Deal</button>
-      </form>
-      <div id="play-actions" class="action-row" hidden>
-        <button id="hit-button" type="button">Hit</button>
-        <button id="stand-button" type="button" class="outline">Stand</button>
+        <div class="controls" aria-label="Game controls">
+          <form id="deal-form" class="action-row">
+            <label for="bet-amount">Bet</label>
+            <div class="bet-field">
+              <input id="bet-amount" name="bet" type="number" min="10" max="500" step="10" value="20" required>
+              <span>chips</span>
+            </div>
+            <button id="deal-button" type="submit" class="primary">Deal cards</button>
+          </form>
+          <div id="play-actions" class="action-row" hidden>
+            <button id="hit-button" type="button" class="primary">Hit</button>
+            <button id="stand-button" type="button" class="secondary">Stand</button>
+          </div>
+          <p id="no-chips" class="help" hidden>Not enough chips to bet. Reset to start again.</p>
+        </div>
+      </section>
+      <div class="after-game">
+        <p>Dealer stands on 17. Blackjack pays 3:2.</p>
+        <button id="reset-button" type="button" class="reset">Reset chips</button>
       </div>
-      <p id="no-chips" class="help" hidden>Not enough chips to bet. Reset your chips to play again.</p>
-      <button id="reset-button" type="button" class="reset">Reset play chips</button>
-    </section>
-    <footer>Blackjack pays 3:2 · Other wins pay 1:1 · Ties return your bet · Dealer stands on 17 · No real money</footer>
-  </main>
+    </main>
+
+    <footer>Just for fun. No real money.</footer>
+  </div>
 </body>
 </html>

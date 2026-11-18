@@ -16,7 +16,7 @@ This is intentionally **not full Texas Hold'em**: there is no betting, money, bl
 ## Stack
 Apache with PHP 8.0+, vanilla JavaScript and CSS. No Composer packages, JavaScript build step, SQL server, or third-party services. State is stored in a locked JSON file **outside the Apache document root**. Player identity is a PHP session cookie and POST requests use a CSRF token.
 
-## Server deployment (coordinate with the server administrator)
+## Server deployment
 1. Confirm which existing Apache HTTPS vhost serves `poker.lab.test` and record its `DocumentRoot`. Keep the current DNS, Tailscale, Apache virtual-host, and TLS/CA configuration intact.
 2. Verify that the PHP handler and session storage work: `php -v`. Find the active virtual hosts using `sudo apache2ctl -S` on Ubuntu/Debian or `sudo httpd -S` on RHEL, and validate the configuration with the corresponding `-t` command.
 3. Copy **`index.php`, `api.php`, `lib.php`, `app.js`, and `style.css`** from the reviewed repository revision into that vhost's document root. Do not copy `tests/` or `.github/` into the public web directory.
